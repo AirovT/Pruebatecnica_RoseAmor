@@ -87,4 +87,4 @@ A continuación, se presenta la visualización final del dashboard estratégico 
 ![Resultado Final RoseAmor](RoseAmor_Dashboard.png)
 
 ---
-*Desarrollado para la Evaluación Técnica de RoseAmor - 2025*
+*Desarrollado para la Evaluación Técnica de RoseAmor - 2026*
