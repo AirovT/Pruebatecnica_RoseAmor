@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoseAmor | Enterprise Sales Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Persistent Header -->
+        <header class="header">
+            <div class="header-brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="RoseAmor Logo" class="brand-logo">
+            </div>
+            <div class="header-info">
+                <h1>RoseAmor Dashboard</h1>
+            </div>
+        </header>
+
+        <!-- Notification Area -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Executive KPIs -->
+        <section class="kpis-grid">
+            <div class="kpi-card">
+                <span class="kpi-label">Ventas Totales</span>
+                <span class="kpi-value">${{ "{:,.2f}".format(kpis['ventas_totales'] or 0) }}</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Margen Operativo</span>
+                <span class="kpi-value">${{ "{:,.2f}".format(margin['margen'] or 0) }}</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Volumen de Pedidos</span>
+                <span class="kpi-value">{{ "{:,}".format(kpis['num_pedidos'] or 0) }}</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Ticket Promedio</span>
+                <span class="kpi-value">${{ "{:,.2f}".format(kpis['ticket_promedio'] or 0) }}</span>
+            </div>
+        </section>
+
+        <div class="dashboard-grid">
+            <!-- Order Registration Section -->
+            <section class="section-card">
+                <div class="section-header">
+                    <h2>📝 Registro de Nueva Operación</h2>
+                </div>
+                <div class="section-content">
+                    <form action="/order" method="POST" class="order-form" id="orderForm">
+                        <div class="form-group">
+                            <label for="order_id">ID de Pedido</label>
+                            <input type="text" id="order_id" name="order_id" value="{{ new_order_id }}" required
+                                pattern="O[0-9]{6}" title="Formato: O seguido de 6 dígitos">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="customer_id">Cliente Corporativo</label>
+                            <select id="customer_id" name="customer_id" required>
+                                <option value="">— Seleccionar cliente —</option>
+                                {% for c in customers %}
+                                <option value="{{ c['customer_id'] }}">
+                                    {{ c['customer_id'] }} — {{ c['name'] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sku">Producto (SKU)</label>
+                            <select id="sku" name="sku" required>
+                                <option value="">— Seleccionar producto —</option>
+                                {% for p in products %}
+                                <option value="{{ p['sku'] }}" data-cost="{{ p['cost'] }}">
+                                    {{ p['sku'] }} — {{ p['category'] }} (Ref: ${{ p['cost'] }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantity">Cantidad Solicitada</label>
+                            <input type="number" id="quantity" name="quantity" min="1" value="1" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="unit_price">Precio de Venta ($)</label>
+                            <input type="number" id="unit_price" name="unit_price" min="0.01" step="0.01"
+                                placeholder="Ej: 10.50" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="order_date">Fecha de Transacción</label>
+                            <input type="date" id="order_date" name="order_date" id="order_date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="channel">Canal de Distribución</label>
+                            <select id="channel" name="channel" required>
+                                {% for ch in channels %}
+                                <option value="{{ ch }}">{{ ch | capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <div class="total-display-container">
+                                <span>Total Estimado de la Operación</span>
+                                <div class="total-display" id="totalDisplay">$0.00</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <button type="submit" class="btn-submit">Confirmar y Registrar Pedido</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Recent Operations Section -->
+            <section class="section-card">
+                <div class="section-header">
+                    <h2>📋 Registro de Operaciones Recientes</h2>
+                </div>
+                <div class="section-content">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Cliente</th>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th class="num">Cant.</th>
+                                    <th class="num">Precio</th>
+                                    <th class="num">Total Bruto</th>
+                                    <th>Fecha</th>
+                                    <th>Canal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in recent_orders %}
+                                <tr>
+                                    <td class="mono">{{ o['order_id'] }}</td>
+                                    <td>{{ o['customer_name'] or o['customer_id'] }}</td>
+                                    <td class="mono">{{ o['sku'] }}</td>
+                                    <td>{{ o['category'] or '-' }}</td>
+                                    <td class="num">{{ o['quantity'] }}</td>
+                                    <td class="num">${{ "{:.2f}".format(o['unit_price']) }}</td>
+                                    <td class="num bold">${{ "{:,.2f}".format(o['total']) }}</td>
+                                    <td>{{ o['order_date'][:10] }}</td>
+                                    <td><span class="badge badge-{{ o['channel'] }}">{{ o['channel'] }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <footer class="footer">
+            <p>RoseAmor Global Operations Intelligence — Propiedad Exclusiva RoseAmor © 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Cálculo reactivo del total
+        const qtyInput = document.getElementById('quantity');
+        const priceInput = document.getElementById('unit_price');
+        const totalDisplay = document.getElementById('totalDisplay');
+
+        function updateTotal() {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const total = qty * price;
+            totalDisplay.textContent = `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        qtyInput.addEventListener('input', updateTotal);
+        priceInput.addEventListener('input', updateTotal);
+
+        // Inicialización de fecha y restricción de futuro
+        const dateInput = document.getElementById('order_date');
+        const today = new Date().toISOString().split('T')[0];
+
+        // Establecer máximo permitido (hoy)
+        dateInput.setAttribute('max', today);
+
+        if (!dateInput.value) {
+            dateInput.value = today;
+        }
+    </script>
+</body>
+
+</html>
