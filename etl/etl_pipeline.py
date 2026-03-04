@@ -343,9 +343,9 @@ def validate():
 def main():
     global LOG_FILE
     
-    print("\n" + "🌹 " * 15)
+    print("\n" + "# " * 15)
     print("  RoseAmor — ETL Pipeline (Senior Edition)")
-    print("🌹 " * 15)
+    print("# " * 15)
     
     start = datetime.now()
     ensure_dirs()
@@ -381,7 +381,7 @@ def main():
         validate()
         
         elapsed = (datetime.now() - start).total_seconds()
-        separator("✅ ETL COMPLETADO EXITOSAMENTE")
+        separator(" ETL COMPLETADO EXITOSAMENTE")
         log(f"Tiempo total: {elapsed:.1f} segundos")
         log(f"Base de datos: {DB_PATH}")
         log(f"CSVs limpios: {PROCESSED_DIR}")
