@@ -19,6 +19,34 @@ El flujo de datos sigue un modelo de capas para garantizar la trazabilidad:
 
 ---
 
+## Exploración y Diagnóstico Previo al Pipeline
+
+Antes de automatizar cualquier transformación, se realizó una exploración manual de los tres archivos fuente mediante el notebook `notebooks/eda_quality_assessment.ipynb`. El objetivo fue entender el estado real de los datos campo a campo, sin asumir nada, y documentar cada hallazgo antes de decidir qué hacer con él.
+
+### Que cubre el notebook
+
+| Sección | Descripción |
+|---------|-------------|
+| **Carga inicial** | Lectura de los CSV crudos sin modificaciones. Verificación de dimensiones (filas × columnas) y tipos de dato inferidos por pandas. |
+| **customers — nulos** | Conteo y porcentaje de valores faltantes por columna. Se identificaron `country` (8 nulos) y `segment` (4 nulos). |
+| **customers — duplicados** | Verificación de unicidad por `customer_id`. No se encontraron duplicados. |
+| **products — nulos** | Se identificó `category` con 2 valores nulos. |
+| **products — costos negativos** | El `describe()` mostró un mínimo negativo en `cost`. Se localizaron 3 productos con costo menor a cero. |
+| **products — productos inactivos** | Se contabilizaron 11 productos con `active = False` y se revisó si tenían órdenes asociadas (sí las tenían). |
+| **orders — nulos en `unit_price`** | Se detectaron ~10 filas sin precio. Se exploró la distribución de precios por SKU para evaluar si la imputación por promedio era viable. |
+| **orders — fechas inválidas** | Se intentó parsear `order_date` con pandas. Las filas con mes 13 o día 40 resultaron en `NaT` y se identificaron para eliminación. |
+| **orders — cantidades negativas o cero** | Se contaron ~8 filas con `quantity <= 0` y se evaluó si podían corresponder a devoluciones. |
+| **orders — duplicados** | Se identificaron ~14 `order_id` repetidos. |
+| **orders — normalización de canal** | Se detectaron variantes de capitalización en `channel` (Ecommerce, ecommerce, ECOMMERCE). |
+| **Integridad referencial** | Se verificó que todos los `customer_id` y `sku` en órdenes existieran en sus respectivas tablas dimensión. Resultado: 0 huérfanos en ambos casos. |
+| **Resumen consolidado** | Se construyó un DataFrame `df_hallazgos` con todos los problemas encontrados, la cantidad de filas afectadas y la decisión tomada por cada uno, que luego sirvió como guía directa para codificar el pipeline ETL. |
+
+### Por que este paso importa
+
+Las decisiones documentadas en el notebook (qué rellenar, qué eliminar, qué corregir y por qué) son las mismas que se codificaron luego en `etl_pipeline.py`. El notebook actúa como el registro de razonamiento previo: muestra que cada transformación del pipeline no fue arbitraria sino que responde a un hallazgo concreto observado en los datos.
+
+---
+
 ## Limpieza de Datos: Que se hizo y por que
 
 El pipeline ETL ejecuta un perfilado automatizado sobre los 3 archivos CSV fuente antes de aplicar cualquier transformación. A continuación se detalla cada hallazgo, la decisión tomada y la justificación técnica.
@@ -150,6 +178,8 @@ En un entorno empresarial real, este proceso manual se reemplazaria por:
 ├── etl/
 │   ├── etl_pipeline.py    <- Script ETL principal
 │   └── requirements.txt
+├── notebooks/
+│   └── eda_quality_assessment.ipynb  <- Exploración manual previa al pipeline
 ├── sql/
 │   ├── schema.sql         <- Definicion de tablas con constraints
 │   └── kpis.sql           <- Consultas de KPIs y visualizaciones
